@@ -23,6 +23,8 @@
     "url": "https://github.com/jonwoodring/octal-number-loader/issues"
   },
   "homepage": "https://github.com/jonwoodring/octal-number-loader#readme",
-  "dependencies": {},
+  "dependencies": {
+    "acorn": "^5.5.3"
+  },
   "devDependencies": {}
 }

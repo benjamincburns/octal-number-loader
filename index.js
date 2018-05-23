@@ -1,35 +1,54 @@
 'use strict';
 
+var acorn = require('acorn')
+var walk = require('acorn/dist/walk')
+
 module.exports = function(source) {
   this.cacheable && this.cacheable();
 
-  if (typeof source === "string") {
-    // javascript doesn't have negative lookbehind
-    // so we have to reverse the string
-    var sreverse = function(s) {
-      var r = '';
-      for (var i = s.length - 1; i >= 0; i--) {
-        r += s[i];
-      }
-      return r;
+  var fragments = [];
+  var endFragment = '';
+
+  let lastEnd = 0;
+  let literals = [];
+  walk.simple(acorn.parse(source), {
+    Literal(node) {
+      literals.push(node);
+    }
+  });
+
+  literals.sort(comparator);
+
+  for (var i = 0; i < literals.length; i++) {
+    var node = literals[i];
+    var literalValue = node.raw;
+
+    fragments.push(source.slice(lastEnd, node.start));
+    lastEnd = node.end;
+
+    endFragment = source.slice(node.end);
+
+    let re = /^0[0-9]+$/
+    if (re.test(literalValue)) {
+      literalValue = '0o' + literalValue.slice(1);
     }
 
-    // ignore identifiers and floating point with reversed lookahead
-    var re = /([0-7]+)0(?![a-zA-Z0-9$_.]|[+-][eE][0-9]*[.]?[0-9]+|[eE][0-9]*[.]?[0-9]+)/;
-
-    var lines = sreverse(source).split('\n');
-    var fixed = [];
-    for (var i = 0; i < lines.length; i++)
-    {
-      var line = lines[i] + '\n';
-      while (re.test(line)) {
-        line = line.replace(re, '$1o0');
-      }
-      fixed.push(line);
-    }
-    
-    source = sreverse(fixed.join(''));
+    fragments.push(literalValue);
   }
 
-  return source;
+  fragments.push(endFragment);
+    
+  return fragments.join('');
+}
+
+function comparator(a, b) {
+  if (a.start < b.start) {
+    return -1;
+  }
+
+  if (a.start == b.start) {
+    return 0;
+  }
+
+  return 1;
 }
